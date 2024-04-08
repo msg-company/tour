@@ -112,6 +112,7 @@ export function TourMap() {
               type: "LineString",
               coordinates: lineCoordinates,
             },
+            properties: {},
           }}
         >
           <Layer
