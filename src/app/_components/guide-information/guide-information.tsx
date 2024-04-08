@@ -16,7 +16,7 @@ export default function GuideInformation() {
     <section className="mt-6">
       <div className="flex items-center gap-4 text-sm">
         <Avatar>
-          <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+          {/*<AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />*/}
           <AvatarFallback>К.В.</AvatarFallback>
         </Avatar>
         <div className="grid gap-1">

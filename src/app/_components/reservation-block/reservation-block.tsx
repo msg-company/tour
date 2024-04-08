@@ -28,6 +28,9 @@ import {
   Minus,
   PawPrint,
   Plus,
+  Ticket,
+  TicketCheck,
+  TicketX,
   UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -45,8 +48,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import Image from "next/image";
 
-interface Ticket {
+interface ITicket {
   id: number;
   type: "adult" | "child" | "pet";
   name: string;
@@ -58,51 +62,62 @@ interface Ticket {
   quantity: number;
 }
 
-const TICKET_DATA: Ticket[] = [
-  {
-    id: 1,
-    type: "adult",
-    name: "Взрослый",
-    description: "От 16 лет",
-    icon: UserRound,
-    price: 240,
-    discount: 0,
-    quantity: 1,
-  },
-  {
-    id: 2,
-    name: "Дети",
-    type: "child",
-    description: "От 6 до 16 лет",
-    icon: Baby,
-    price: 240,
-    discount: 10,
-    quantity: 0,
-  },
-  {
-    id: 3,
-    name: "Пенсионеры",
-    type: "adult",
-    description: "От 60 лет",
-    icon: Glasses,
-    price: 240,
-    discount: 10,
-    quantity: 0,
-  },
-  {
-    id: 4,
-    name: "Питомцы",
-    type: "pet",
-    description: "Животное помощник?",
-    modal_title: "Описания с животными",
-    icon: PawPrint,
-    price: 0,
-    discount: 0,
-    quantity: 0,
-  },
-];
+interface ITickets {
+  tickets: ITicket[];
+  total: number;
+  totalSoldTickets: number;
+}
+
+const TICKET_DATA: ITickets = {
+  tickets: [
+    {
+      id: 1,
+      type: "adult",
+      name: "Взрослый",
+      description: "От 16 лет",
+      icon: UserRound,
+      price: 240,
+      discount: 0,
+      quantity: 1,
+    },
+    {
+      id: 2,
+      name: "Дети",
+      type: "child",
+      description: "От 6 до 16 лет",
+      icon: Baby,
+      price: 240,
+      discount: 10,
+      quantity: 0,
+    },
+    {
+      id: 3,
+      name: "Пенсионеры",
+      type: "adult",
+      description: "От 60 лет",
+      icon: Glasses,
+      price: 240,
+      discount: 10,
+      quantity: 0,
+    },
+    {
+      id: 4,
+      name: "Питомцы",
+      type: "pet",
+      description: "Животное помощник?",
+      modal_title: "Описания с животными",
+      icon: PawPrint,
+      price: 0,
+      discount: 0,
+      quantity: 0,
+    },
+  ],
+  total: 10,
+  totalSoldTickets: 8,
+};
 export function ReservationBlock() {
-  const [tickets, setTickets] = useState<Ticket[]>(TICKET_DATA);
+  const [tickets, setTickets] = useState<ITickets>(TICKET_DATA);
+  const [totalTicketsInCart, setTotalTicketsInCart] = useState<number>(0);
   const [totalPrice, setTotalPrice] = useState<number>(0);
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
   const [tourData, setTourData] = useState<string>("22-06-07-06");
@@ -135,23 +150,71 @@ export function ReservationBlock() {
   }, []);
 
   useEffect(() => {
-    const totalPrice = tickets.reduce((acc, ticket) => {
+    const totalTickets = tickets.tickets.reduce((acc, ticket) => {
+      return acc + ticket.quantity;
+    }, 0);
+
+    const totalPrice = tickets.tickets.reduce((acc, ticket) => {
       return acc + ticket.price * ticket.quantity;
     }, 0);
 
-    const totalDiscount = tickets.reduce((acc, ticket) => {
+    const totalDiscount = tickets.tickets.reduce((acc, ticket) => {
       return acc + (ticket.price * ticket.quantity * ticket.discount) / 100;
     }, 0);
 
+    setTotalTicketsInCart(totalTickets);
     setTotalPrice(totalPrice);
     setTotalDiscount(totalDiscount);
   }, [tickets]);
+  const disableButton = (ticket: ITicket) => {
+    if (ticket.type === "pet" && ticket.quantity >= 6) {
+      console.log("pet");
+      // Если тип билета не "питомец" и количество билетов больше или равно 6
+      return true; // Выключаем кнопку
+    }
+    if (
+      ticket.type !== "pet" &&
+      tickets.totalSoldTickets + 1 >= tickets.total
+    ) {
+      // Если общее количество проданных билетов достигло или превысило общее количество доступных билетов
+      return true; // Выключаем кнопку
+    } else {
+      return false; // В противном случае кнопка остается включенной
+    }
+  };
+
   const handleTicketQuantityChange = (id: number, newQuantity: number) => {
-    setTickets((prevTickets) =>
-      prevTickets.map((ticket) =>
+    setTickets((prevTickets) => {
+      const updatedTickets = prevTickets.tickets.map((ticket) =>
         ticket.id === id ? { ...ticket, quantity: newQuantity } : ticket,
-      ),
+      );
+
+      const prevSoldTickets = prevTickets.totalSoldTickets;
+      const ticket = prevTickets.tickets.find((ticket) => ticket.id === id);
+      const totalSoldTickets =
+        prevSoldTickets +
+        ((ticket && ticket.type !== "pet" ? newQuantity : 0) -
+          (ticket && ticket.type !== "pet" ? ticket.quantity : 0));
+
+      return {
+        ...prevTickets,
+        tickets: updatedTickets,
+        totalSoldTickets: totalSoldTickets,
+      };
+    });
+  };
+
+  // Функция для отключения кнопок уменьшения для взрослых билетов, если остается только один взрослый билет
+  const disableAdultTicketDecrease = (ticket: ITicket): boolean => {
+    const otherAdultTickets = tickets.tickets.filter(
+      (t) => t.type !== "pet" && t.id !== ticket.id,
     );
+    const totalAdultTickets = otherAdultTickets.reduce(
+      (total, t) => total + t.quantity,
+      0,
+    );
+
+    return totalAdultTickets === 0 && ticket.quantity === 1;
   };
 
   const getTicketText = (
@@ -182,7 +245,7 @@ export function ReservationBlock() {
     return ticketTexts.join(", ");
   };
 
-  const getTotalQuantityByType = (tickets: Ticket[], type: string): number => {
+  const getTotalQuantityByType = (tickets: ITicket[], type: string): number => {
     return tickets.reduce(
       (total, ticket) =>
         ticket.type === type ? total + ticket.quantity : total,
@@ -190,9 +253,15 @@ export function ReservationBlock() {
     );
   };
 
-  const adultsQuantity = getTotalQuantityByType(tickets, "adult");
-  const childrenQuantity = getTotalQuantityByType(tickets, "child");
-  const petQuantity = getTotalQuantityByType(tickets, "pet");
+  const adultsQuantity = getTotalQuantityByType(tickets.tickets, "adult");
+  const childrenQuantity = getTotalQuantityByType(tickets.tickets, "child");
+  const petQuantity = getTotalQuantityByType(tickets.tickets, "pet");
+
+  const formatTickets = (count: number): string => {
+    if (count === 1) return "билет";
+    if (count > 1 && count < 5) return "билета";
+    return "билетов";
+  };
 
   return (
     <>
@@ -246,7 +315,26 @@ export function ReservationBlock() {
               </Button>
             </PopoverTrigger>
             <PopoverContent style={{ width: `${width}px` }}>
-              {tickets.map((ticket) => (
+              <div className="my-2 flex">
+                <div className="flex items-center justify-start space-x-2">
+                  {tickets.total - tickets.totalSoldTickets - 1 ? (
+                    <>
+                      <Ticket className="text-yellow-500" />
+                      <p className="text-base text-yellow-500">
+                        {`Доступно билетов: ${tickets.total - tickets.totalSoldTickets - 1} шт.`}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <TicketX className="text-red-500" />
+                      <p className="text-base text-red-500">
+                        Билетов больше нету
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              {tickets.tickets.map((ticket) => (
                 <div
                   key={ticket.id}
                   className="mt-2 flex items-center justify-between"
@@ -284,7 +372,7 @@ export function ReservationBlock() {
                           Math.max(0, ticket.quantity - 1),
                         )
                       }
-                      disabled={ticket.quantity <= 0}
+                      disabled={disableAdultTicketDecrease(ticket)}
                     >
                       <Minus className="h-4 w-4" />
                       <span className="sr-only">Decrease</span>
@@ -304,7 +392,7 @@ export function ReservationBlock() {
                           ticket.quantity + 1,
                         )
                       }
-                      disabled={ticket.quantity >= 10}
+                      disabled={disableButton(ticket)}
                     >
                       <Plus className="h-4 w-4" />
                       <span className="sr-only">Increase</span>
@@ -312,6 +400,7 @@ export function ReservationBlock() {
                   </div>
                 </div>
               ))}
+
               <p className="mt-3 text-xs leading-4 text-gray-500">
                 Тур рассчитан максимум на 26 участников, не считая младенцев.
                 Если вы планируете взять больше 1 питомца, сообщите об этом
@@ -321,7 +410,7 @@ export function ReservationBlock() {
           </Popover>
 
           <div className=" mt-1 text-center text-sm text-green-500">
-            Осталось 8 из 26 мест
+            {`Осталось ${tickets.total - tickets.totalSoldTickets - 1} из ${tickets.total}  мест`}
           </div>
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between">
@@ -374,13 +463,29 @@ export function ReservationBlock() {
               Забронировать
             </Button>
             <hr className="m-0 mb-2 mt-6 w-full border-b  border-t-0 border-solid border-b-gray-200" />
-            <div className="flex w-full items-center justify-between">
-              <p>Скидка</p>
-              <p>{totalDiscount} €</p>
+            <div className="flex items-center justify-between">
+              <p className="text-base font-light text-black">
+                {`€ 240 x ${totalTicketsInCart} ${formatTickets(totalTicketsInCart)}`}
+              </p>
+              <p className="text-base font-light text-black">€ {totalPrice}</p>
             </div>
+            {totalDiscount ? (
+              <div className="flex items-center justify-between">
+                <p className="text-base font-light text-black">Скидка</p>
+                <p className="text-base font-light text-green-500">
+                  € -{totalDiscount}
+                </p>
+              </div>
+            ) : (
+              ""
+            )}
+
+            <hr className="m-0 mb-2 mt-2 w-full border-b  border-t-0 border-solid border-b-gray-200" />
             <div className="flex w-full items-center justify-between">
-              <p>Итого</p>
-              <p>{totalPrice - totalDiscount} €</p>
+              <p className="text-base font-bold text-black">Итого</p>
+              <p className="text-base font-bold text-black">
+                € {totalPrice - totalDiscount}
+              </p>
             </div>
           </div>
         </CardFooter>
@@ -401,34 +506,161 @@ export function ReservationBlock() {
         onOpenChange={setIsModalBuyTicketOpen}
       >
         <DialogContent className="flex h-screen min-w-[90%]">
-          <div className="grid grid-cols-12">
+          <div className="mt-6 grid grid-cols-12 gap-4">
             <div className="col-span-7 flex flex-col gap-2">
-              Забронировать тур
+              <p className="text-lg font-semibold">Информация о билетах</p>
+              <div className="flex space-x-4">
+                <div className="flex items-center justify-start space-x-2">
+                  <TicketCheck className="text-green-500" />
+                  <p className="text-base text-green-500">
+                    {`Ваши билеты: ${totalTicketsInCart} шт.`}
+                  </p>
+                </div>
+                <div className="flex items-center justify-start space-x-2">
+                  {tickets.total - tickets.totalSoldTickets - 1 ? (
+                    <>
+                      <Ticket className="text-yellow-500" />
+                      <p className="text-base text-yellow-500">
+                        {`Доступно билетов: ${tickets.total - tickets.totalSoldTickets - 1} шт.`}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <TicketX className="text-red-500" />
+                      <p className="text-base text-red-500">
+                        Билетов больше нету
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-12 gap-4">
+                {tickets.tickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="col-span-6 flex items-center justify-between"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-md bg-gray-100">
+                        <ticket.icon className="h-5 w-5 text-gray-600" />
+                      </div>
+                      <div className="flex-col items-center justify-between">
+                        <div className="text-base font-medium">
+                          {ticket.name}
+                        </div>
+                        {ticket.modal_title ? (
+                          <div
+                            className="cursor-pointer text-sm text-gray-500 underline underline-offset-2 hover:text-gray-500"
+                            onClick={(e) => {
+                              handleDescriptionClick(
+                                ticket.modal_title ?? "",
+                                e,
+                              );
+                            }}
+                          >
+                            {ticket.description}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">
+                            {ticket.description}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 rounded-full"
+                        onClick={() =>
+                          handleTicketQuantityChange(
+                            ticket.id,
+                            Math.max(0, ticket.quantity - 1),
+                          )
+                        }
+                        disabled={disableAdultTicketDecrease(ticket)}
+                      >
+                        <Minus className="h-4 w-4" />
+                        <span className="sr-only">Decrease</span>
+                      </Button>
+                      <div className="flex-1 text-center">
+                        <div className="text-xl font-bold tracking-tighter">
+                          {ticket.quantity}
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 shrink-0 rounded-full"
+                        onClick={() =>
+                          handleTicketQuantityChange(
+                            ticket.id,
+                            ticket.quantity + 1,
+                          )
+                        }
+                        disabled={disableButton(ticket)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span className="sr-only">Increase</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             <div className="col-span-5">
               <div className="flex flex-col gap-1 rounded-lg border border-solid p-4">
+                <div className="flex items-center justify-start">
+                  <div className="h-24 w-24">
+                    <Image
+                      src="/1.jpg"
+                      alt="1"
+                      width={100}
+                      height={100}
+                      className="aspect-square h-auto w-auto rounded-xl object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col pl-3">
+                    <p className="text-base font-semibold text-black">
+                      Тур в Париж, замки Луары и Руан
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold leading-none tracking-tight">
+                      240 €
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="text-sm text-gray-500">
+                        24 € / день • 10 дней
+                      </span>
+                    </p>
+                  </div>
+                </div>
                 <hr className="m-0 my-4 w-full border-b border-t-0 border-solid border-b-gray-200" />
+                <p className="text-lg font-semibold text-black">
+                  Детализация цены
+                </p>
                 <div className="flex items-center justify-between">
                   <p className="text-base font-light text-black">
-                    € 240 x 7 билетов
+                    {`€ 240 x ${totalTicketsInCart} ${formatTickets(totalTicketsInCart)}`}
                   </p>
-                  <p className="text-base font-light text-black">€ 1 400,00</p>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-base font-light text-black">Скидка</p>
-                  <p className="text-base font-light text-green-500">
-                    € -140,00
+                  <p className="text-base font-light text-black">
+                    € {totalPrice}
                   </p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-base font-light text-black">Налог</p>
-                  <p className="text-base font-light text-black">€ 18,00</p>
-                </div>
+                {totalDiscount ? (
+                  <div className="flex items-center justify-between">
+                    <p className="text-base font-light text-black">Скидка</p>
+                    <p className="text-base font-light text-green-500">
+                      € -{totalDiscount}
+                    </p>
+                  </div>
+                ) : (
+                  ""
+                )}
                 <hr className="m-0 my-4 w-full border-b border-t-0 border-solid border-b-gray-200" />
                 <div className="flex items-center justify-between">
                   <p className="text-base font-semibold text-black">Итого:</p>
                   <p className="text-base font-semibold text-black">
-                    € 2 000,00
+                    € {totalPrice - totalDiscount}
                   </p>
                 </div>
                 <hr className="m-0 my-4 w-full border-b border-t-0 border-solid border-b-gray-200" />
@@ -442,9 +674,6 @@ export function ReservationBlock() {
 
                   <p className="text-xs leading-4 text-gray-500">
                     Я также принимаю{" "}
-                    <span className="cursor-pointer font-semibold text-blue-500 underline underline-offset-2 hover:text-blue-600">
-                      обновленные
-                    </span>{" "}
                     <span className="cursor-pointer font-semibold text-blue-500 underline underline-offset-2 hover:text-blue-600">
                       Условия предоставления услуг
                     </span>

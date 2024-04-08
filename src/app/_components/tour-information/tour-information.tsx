@@ -20,6 +20,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Rating } from "@/app/_components/accommodation/_components/rating";
+import { DifficultyLevels } from "@/app/_components/accommodation/_components/difficulty-levels";
 
 export function TourInformation() {
   return (
@@ -83,14 +84,24 @@ export function TourInformation() {
           <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
             <div className="flex flex-col space-y-1.5 p-6">
               <div className="flex w-full items-center justify-between">
-                <p className="text-base font-semibold leading-none tracking-tight text-gray-500">
-                  Активность
-                </p>
+                <div className="flex">
+                  <p className="text-base font-semibold leading-none tracking-tight text-gray-500">
+                    Активность
+                  </p>
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <CircleHelp className="ml-1 h-4 w-4 cursor-pointer text-gray-500" />
+                    </HoverCardTrigger>
+                    <HoverCardContent className="min-w-[900px]">
+                      <DifficultyLevels />
+                    </HoverCardContent>
+                  </HoverCard>
+                </div>
                 <Activity className="h-5 w-5" />
               </div>
               <span className="text-sm text-black">Средний</span>
               <span className="cursor-pointer text-sm underline underline-offset-4 hover:text-gray-500">
-                Смотреть маршрут
+                Смотреть программу
               </span>
             </div>
           </div>

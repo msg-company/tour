@@ -7,6 +7,8 @@ import { TourProgram } from "@/app/_components/tour-program/tour-program";
 import { Gallery } from "@/app/_components/gallery/gallery";
 import { ReservationBlock } from "@/app/_components/reservation-block/reservation-block";
 import { TourInformation } from "@/app/_components/tour-information/tour-information";
+import { TourConditions } from "@/app/_components/tour-conditions/tour-conditions";
+import { RecommendedTours } from "@/app/_components/recommended-tours/recommended-tours";
 
 export default function Home() {
   return (
@@ -26,13 +28,12 @@ export default function Home() {
             <Accommodation />
             <TourProgram />
           </div>
-          <div className="sticky top-20 flex w-1/3">
+          <div className="sticky top-16 flex w-1/3">
             <ReservationBlock />
           </div>
         </div>
-        <section className="container mx-auto h-[1000px] bg-white">
-          <h3 className="mt-8 text-3xl font-bold">Включено в стоимость</h3>
-        </section>
+        <TourConditions />
+        <RecommendedTours />
       </main>
     </>
   );
